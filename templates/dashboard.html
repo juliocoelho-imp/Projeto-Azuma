@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+<link rel="stylesheet" href="/static/style.css">   
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row">
+    
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3 shadow-sm h-100">
+            <div class="card-header">Fila de Atendimento</div>
+            <div class="card-body">
+                <h5 class="card-title">Chamados Abertos</h5>
+                <p class="card-text display-4 fw-bold">{{ abertos }}</p>
+                <a href="#" class="btn btn-light btn-sm text-primary fw-bold stretched-link">Ver lista completa</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-white bg-warning mb-3 shadow-sm h-100">
+            <div class="card-header">Aguardando</div>
+            <div class="card-body">
+                <h5 class="card-title">Chamados Pausados</h5>
+                <p class="card-text display-4 fw-bold">{{ pausados }}</p>
+                <a href="#" class="btn btn-light btn-sm text-warning fw-bold stretched-link">Ver pausados</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3 shadow-sm h-100">
+            <div class="card-header">Minhas Solicitações</div>
+            <div class="card-body">
+                <h5 class="card-title">Meus Tickets</h5>
+                <p class="card-text display-4 fw-bold">{{ meus }}</p>
+                <a href="#" class="btn btn-light btn-sm text-success fw-bold stretched-link">Acessar meus tickets</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mt-5">Últimas Atualizações</h3>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Título</th>
+                <th scope="col">Status</th>
+                <th scope="col">Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1,001</td>
+                <td>Erro na Impressora</td>
+                <td><span class="badge bg-primary">Aberto</span></td>
+                <td>Hoje</td>
+            </tr>
+            <tr>
+                <td>1,002</td>
+                <td>Instalar Office</td>
+                <td><span class="badge bg-warning text-dark">Pausado</span></td>
+                <td>Ontem</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

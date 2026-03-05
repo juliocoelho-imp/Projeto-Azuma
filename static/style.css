@@ -1,0 +1,165 @@
+/* static/style.css - Menu Retrátil Automático */
+
+:root {
+  --sidebar-width-collapsed: 80px; 
+  --sidebar-width-expanded: 250px; 
+  --sidebar-bg: #1e1e2d; 
+  --sidebar-text: #9899ac;
+  --sidebar-active: #3699ff;
+  --body-bg: #f5f8fa;
+}
+
+body {
+  background-color: var(--body-bg);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #3f4254;
+  overflow-x: hidden; 
+}
+
+/* --- SIDEBAR (Barra Lateral) --- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width-collapsed); 
+  background-color: var(--sidebar-bg);
+  transition: all 0.3s ease; 
+  z-index: 1000;
+  overflow-x: hidden;
+  white-space: nowrap; 
+  box-shadow: 0px 0px 20px rgba(0,0,0,0.1);
+}
+
+/* Quando o mouse passa em cima da sidebar */
+.sidebar:hover {
+  width: var(--sidebar-width-expanded); 
+}
+
+/* Links do Menu */
+.sidebar .nav-link {
+  color: var(--sidebar-text);
+  padding: 15px 0;
+  padding-left: 25px; 
+  font-weight: 500;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  transition: 0.2s;
+  height: 50px;
+}
+
+.sidebar .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255,255,255,0.05);
+}
+
+/* Ícones */
+.sidebar .nav-link i {
+  font-size: 1.5rem;
+  min-width: 30px; 
+  margin-right: 15px; 
+  text-align: center;
+}
+
+/* O Texto dos Links (Escondido quando fechado) */
+
+.sidebar .nav-link span {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sidebar:hover .nav-link span {
+  opacity: 1;
+}
+/* --- ESTILO DO CHAT MODERNO (SOBRESCREVENDO O BOOTSTRAP) --- */
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: #f1f5f9; /* Fundo cinza bem suave */
+    border: 1px solid #cbd5e1;
+    border-radius: 25px; /* Deixa totalmente arredondado (estilo pílula) */
+    padding: 4px 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+/* O que acontece quando clica para digitar */
+.chat-input-wrapper:focus-within {
+    background-color: #ffffff;
+    border-color: #3b82f6; /* Borda azul do Azuma */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* --- ESTILO DO CHAT MODERNO (SOBRESCREVENDO O BOOTSTRAP) --- */
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: #f1f5f9; /* Fundo cinza bem suave */
+    border: 1px solid #cbd5e1;
+    border-radius: 25px; /* Deixa totalmente arredondado (estilo pílula) */
+    padding: 4px 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+/* O que acontece quando clica para digitar */
+.chat-input-wrapper:focus-within {
+    background-color: #ffffff;
+    border-color: #3b82f6; /* Borda azul do Azuma */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* O campo de texto "invisível" */
+.chat-input-wrapper textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    flex-grow: 1;
+    resize: none;
+    height: 40px;
+    padding-top: 8px; /* Centraliza o texto */
+    font-size: 0.95rem;
+}
+
+/* O botão de enviar (apenas o ícone de aviãozinho) */
+.btn-send-icon {
+    background: transparent;
+    border: none;
+    color: #3b82f6;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.btn-send-icon:hover {
+    transform: scale(1.15); /* Dá um zoomzinho ao passar o mouse */
+    color: #2563eb;
+}
+
+/* Título do Menu (Logo) */
+.sidebar-heading {
+  color: #fff;
+  font-weight: bold;
+  padding: 20px 0;
+  padding-left: 25px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* --- CONTEÚDO PRINCIPAL (Main) --- */
+main {
+  /* Empurra o conteúdo para a direita para não ficar embaixo do menu fechado */
+  margin-left: var(--sidebar-width-collapsed); 
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+  width: calc(100% - var(--sidebar-width-collapsed));
+}

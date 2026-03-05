@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azuma</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 74px; /* Tamanho quando encolhido */
+            --sidebar-bg: #0f172a; 
+            --sidebar-hover: #1e293b;
+            --primary-accent: #3b82f6;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* --- SIDEBAR INTELIGENTE --- */
+        .sidebar {
+            width: var(--sidebar-collapsed-width); /* Começa pequena */
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+            z-index: 1050;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animação suave */
+            overflow: hidden; /* Esconde textos longos na animação */
+            box-shadow: 4px 0 24px rgba(0,0,0,0.05);
+        }
+
+        /* Quando o mouse entra na sidebar, ela cresce */
+        .sidebar:hover {
+            width: var(--sidebar-width);
+            padding: 20px 16px; /* Ajuste leve do padding */
+        }
+
+        /* Ajuste do Header/Logo */
+        .sidebar-header {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-left: 5px;
+            white-space: nowrap; /* Não quebra linha */
+        }
+
+        .brand-icon {
+            min-width: 42px; /* Garante tamanho fixo do ícone */
+            height: 42px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            margin-right: 12px;
+        }
+
+        .brand-text {
+            font-weight: 700;
+            color: white;
+            opacity: 0; /* Invisível quando fechado */
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .sidebar:hover .brand-text {
+            opacity: 1; /* Visível no hover */
+            transition-delay: 0.1s;
+        }
+
+        /* Links do Menu */
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 12px 10px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+            min-width: 32px; /* Largura fixa p/ alinhar ícones */
+            display: flex;
+            justify-content: center;
+        }
+
+        .nav-link span {
+            margin-left: 12px;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.2s ease;
+        }
+
+        /* Efeitos no Hover da Sidebar */
+        .sidebar:hover .nav-link span {
+            opacity: 1;
+            transform: translateX(0);
+            transition-delay: 0.1s;
+        }
+
+        .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: white;
+        }
+
+        .nav-link.active {
+            background-color: var(--primary-accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Títulos de Seção (Gestão, Sistema, etc) */
+        .sidebar-heading {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            padding-left: 14px;
+            opacity: 0; /* Escondido quando fechado */
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .sidebar:hover .sidebar-heading {
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+
+        /* Perfil no Rodapé */
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 15px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .user-avatar {
+            min-width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #475569;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .user-info {
+            margin-left: 12px;
+            opacity: 0;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar:hover .user-info {
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+
+        /* --- CONTEÚDO PRINCIPAL --- */
+        .main-content {
+            /* Deixa espaço apenas para a barra fechada */
+            margin-left: var(--sidebar-collapsed-width); 
+            padding: 30px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Opcional: Se quiser que o conteúdo empurre junto */
+        /* .sidebar:hover ~ .main-content { margin-left: var(--sidebar-width); } */
+
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="bi bi-headset"></i></div>
+            <div class="brand-text">AZUMA</div>
+        </div>
+
+        <div class="d-flex flex-column h-100">
+            
+            <div class="sidebar-heading">Menu</div>
+            
+            <a href="#" class="nav-link" title="Dashboard">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Dashboard</span>
+            </a>
+            
+            <a href="{{ url_for('tickets') }}" class="nav-link {% if request.endpoint == 'tickets' %}active{% endif %}" title="Chamados">
+                <i class="bi bi-ticket-detailed-fill"></i>
+                <span>Chamados</span>
+            </a>
+            
+            <a href="#" class="nav-link" title="Projetos">
+                <i class="bi bi-kanban-fill"></i>
+                <span>Projetos</span>
+            </a>
+
+            <div class="sidebar-heading">Gestão</div>
+
+            <a href="#" class="nav-link" title="Clientes">
+                <i class="bi bi-people-fill"></i>
+                <span>Clientes</span>
+            </a>
+            <a href="#" class="nav-link" title="Inventário">
+                <i class="bi bi-box-seam-fill"></i>
+                <span>Inventário</span>
+            </a>
+
+            <div class="sidebar-heading">Sistema</div>
+            
+            <a href="#" class="nav-link" title="Configurações">
+                <i class="bi bi-gear-fill"></i>
+                <span>Configurações</span>
+            </a>
+            
+            <div class="sidebar-footer">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <div class="small fw-bold text-white">Admin</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">admin@azuma.com</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
