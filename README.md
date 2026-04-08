@@ -11,6 +11,14 @@ Este projeto foi desenvolvido como entrega da **AC1**, focando na integração c
 * **Gestão de Status e Encerramento:** Controle de fluxo do chamado permitindo a atualização do status para "Concluído".
 * **Filtros Dinâmicos:** Busca por empresa e organização por status.
 
+## Novas Funcionalidades (Entrega AC2)
+
+* **Edição e Atualização (Update):** Modal interativo que permite aos operadores alterar dados de chamados já existentes (como prioridade, categoria e mesa) com reflexo imediato no banco de dados.
+* **Cronômetro de Atendimento:** Lógica de "Play/Pause" integrada ao back-end para registrar o tempo exato trabalhado no ticket, alterando o status automaticamente para "Em Andamento".
+* **Dashboard de Indicadores:** Painel superior com contadores em tempo real, realizando consultas no banco para exibir o volume de chamados Abertos, Em Andamento e Concluídos.
+* **Métricas de SLA:** Cálculo e exibição do Tempo Médio de Resolução da equipe com base no histórico de chamados finalizados.
+
+
 ## Tecnologias Utilizadas
 
 **Front-end:**
