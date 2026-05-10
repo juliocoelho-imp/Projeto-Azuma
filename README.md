@@ -18,6 +18,12 @@ Este projeto foi desenvolvido como entrega da **AC1**, focando na integração c
 * **Dashboard de Indicadores:** Painel superior com contadores em tempo real, realizando consultas no banco para exibir o volume de chamados Abertos, Em Andamento e Concluídos.
 * **Métricas de SLA:** Cálculo e exibição do Tempo Médio de Resolução da equipe com base no histórico de chamados finalizados.
 
+## Novas Funcionalidades (Entrega AC3)
+* **SearchBox Avançado:** Campo de busca em tempo real que pesquisa simultaneamente por título, descrição, empresa e operador do chamado, retornando resultados filtrados sem recarregar a página.
+* **Filtros pré selecionados:** Chips clicáveis que permitem filtrar a lista de chamados por status (Mais recente, por prioridade, maior tempo e prazo mais próximo).
+* **Níveis de prioridade:** Cada chamado possui um nível de prioridade (Alta, Média ou Baixa) exibido visualmente por badges coloridas na tabela, com borda lateral na linha indicando urgência. A ordenação da lista pode ser feita por prioridade, e o dashboard exibe a distribuição dos chamados abertos por nível.
+* **Limpar filtros:** Botão que aparece automaticamente quando há uma busca ativa, removendo o texto pesquisado e retornando a lista ao estado completo sem perder os demais filtros de status selecionados.
+
 
 ## Tecnologias Utilizadas
 
