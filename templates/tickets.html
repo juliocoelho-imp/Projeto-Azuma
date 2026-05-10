@@ -1,0 +1,516 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .chat-container { height: 460px; overflow-y: auto; background-color: #f8f9fa; border-radius: 8px; }
+    .msg-bubble { max-width: 85%; padding: 12px 16px; border-radius: 12px; position: relative; margin-bottom: 4px; white-space: pre-wrap; }
+    .msg-publico { background-color: white; border: 1px solid #e9ecef; margin-right: auto; border-bottom-left-radius: 2px; }
+    .msg-privado { background-color: #fff3cd; border: 1px solid #ffeeba; margin-left: auto; border-bottom-right-radius: 2px; }
+    .row-active { background-color: #f0fff4 !important; border-left: 4px solid #198754; }
+    .row-alta   { border-left: 3px solid #ef4444; }
+    .row-media  { border-left: 3px solid #f59e0b; }
+    .row-baixa  { border-left: 3px solid #10b981; }
+
+    /* Badges de prioridade */
+    .badge-alta  { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-media { background-color: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .badge-baixa { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+    /* Indicador de prazo */
+    .prazo-vencido { color: #dc2626; font-weight: 600; }
+    .prazo-urgente { color: #d97706; font-weight: 600; }
+    .prazo-proximo { color: #2563eb; }
+    .prazo-ok      { color: #64748b; }
+
+    /* Filtro ativo */
+    .filter-chip.active { background-color: #0f172a !important; color: #fff !important; border-color: #0f172a !important; }
+
+    /* Busca */
+    .search-wrapper { position: relative; }
+    .search-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    .search-wrapper input { padding-left: 36px; }
+</style>
+
+<!-- Cabeçalho -->
+<div class="d-flex justify-content-between align-items-center mb-3 pt-3">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">Central de Chamados</h2>
+        <small class="text-muted">{{ chamados|length }} chamado(s) encontrado(s)</small>
+    </div>
+    <button type="button" class="btn btn-dark shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#novoChamadoModal">
+        <i class="bi bi-plus-lg me-2"></i>Novo Ticket
+    </button>
+</div>
+
+<!-- Barra de busca + ordenação -->
+<div class="d-flex gap-2 mb-3 align-items-center">
+    <form method="GET" action="{{ url_for('tickets') }}" class="d-flex gap-2 flex-grow-1 align-items-center" id="filterForm">
+        <!-- Campos ocultos para manter filtros ativos -->
+        {% if status_atual %}<input type="hidden" name="status" value="{{ status_atual }}">{% endif %}
+        {% if prioridade_atual %}<input type="hidden" name="prioridade" value="{{ prioridade_atual }}">{% endif %}
+        {% if ordem_atual and ordem_atual != 'recente' %}<input type="hidden" name="ordem" value="{{ ordem_atual }}">{% endif %}
+
+        <div class="search-wrapper flex-grow-1">
+            <i class="bi bi-search"></i>
+            <input type="text" name="busca" class="form-control rounded-pill" placeholder="Buscar por título, empresa, operador..." value="{{ busca_atual }}">
+        </div>
+        <button type="submit" class="btn btn-primary rounded-pill px-3">Buscar</button>
+        {% if busca_atual %}
+            <a href="{{ url_for('tickets', status=status_atual, prioridade=prioridade_atual, ordem=ordem_atual) }}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-x"></i> Limpar
+            </a>
+        {% endif %}
+    </form>
+
+    <!-- Ordenação -->
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary rounded-pill px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-sort-down me-1"></i>
+            {% if ordem_atual == 'prioridade' %}Prioridade
+            {% elif ordem_atual == 'tempo' %}Tempo
+            {% elif ordem_atual == 'prazo' %}Prazo
+            {% else %}Mais recente{% endif %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+            <li><a class="dropdown-item {% if ordem_atual == 'recente' or not ordem_atual %}active{% endif %}" href="{{ url_for('tickets', status=status_atual, prioridade=prioridade_atual, busca=busca_atual, ordem='recente') }}"><i class="bi bi-clock me-2"></i>Mais recente</a></li>
+            <li><a class="dropdown-item {% if ordem_atual == 'prioridade' %}active{% endif %}" href="{{ url_for('tickets', status=status_atual, prioridade=prioridade_atual, busca=busca_atual, ordem='prioridade') }}"><i class="bi bi-exclamation-triangle me-2"></i>Por prioridade</a></li>
+            <li><a class="dropdown-item {% if ordem_atual == 'tempo' %}active{% endif %}" href="{{ url_for('tickets', status=status_atual, prioridade=prioridade_atual, busca=busca_atual, ordem='tempo') }}"><i class="bi bi-stopwatch me-2"></i>Maior tempo</a></li>
+            <li><a class="dropdown-item {% if ordem_atual == 'prazo' %}active{% endif %}" href="{{ url_for('tickets', status=status_atual, prioridade=prioridade_atual, busca=busca_atual, ordem='prazo') }}"><i class="bi bi-calendar-event me-2"></i>Prazo mais próximo</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Chips de filtro: Status + Empresas -->
+<div class="d-flex gap-2 mb-3 overflow-auto pb-1 flex-wrap">
+    <span class="text-muted small align-self-center me-1">Status:</span>
+    <a href="{{ url_for('tickets', busca=busca_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-chip {% if not status_atual %}active{% endif %}">Todos</a>
+    <a href="{{ url_for('tickets', status='Aberto', busca=busca_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-outline-success rounded-pill px-3 filter-chip {% if status_atual == 'Aberto' %}active{% endif %}">Abertos</a>
+    <a href="{{ url_for('tickets', status='Em Andamento', busca=busca_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-outline-warning rounded-pill px-3 filter-chip {% if status_atual == 'Em Andamento' %}active{% endif %}">Em Andamento</a>
+    <a href="{{ url_for('tickets', status='Pausado', busca=busca_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-chip {% if status_atual == 'Pausado' %}active{% endif %}">Pausados</a>
+    <a href="{{ url_for('tickets', status='Concluído', busca=busca_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-outline-dark rounded-pill px-3 filter-chip {% if status_atual == 'Concluído' %}active{% endif %}">Concluídos</a>
+    {% for emp in empresas_disponiveis %}
+    <a href="{{ url_for('tickets', empresa=emp, busca=busca_atual, status=status_atual, ordem=ordem_atual) }}"
+       class="btn btn-sm btn-light border rounded-pill px-3">{{ emp }}</a>
+    {% endfor %}
+</div>
+
+<!-- Tabela de chamados -->
+<div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="bg-light text-uppercase small text-muted">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>Ticket</th>
+                    <th>Prioridade</th>
+                    <th>Operador</th>
+                    <th>Prazo</th>
+                    <th>Status</th>
+                    <th>Tempo</th>
+                    <th class="text-end pe-4">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for chamado in chamados %}
+                <tr class="cursor-pointer {% if chamado.inicio_atendimento %}row-active{% elif chamado.prioridade == 'Alta' %}row-alta{% elif chamado.prioridade == 'Média' %}row-media{% else %}row-baixa{% endif %}"
+                    onclick="new bootstrap.Modal(document.getElementById('workModal{{ chamado.id }}')).show()" style="cursor: pointer;">
+
+                    <td class="ps-4 fw-bold text-secondary">#{{ chamado.id }}</td>
+
+                    <td>
+                        <div class="fw-bold text-dark">{{ chamado.titulo }}</div>
+                        <div class="small text-muted">{{ chamado.empresa or '—' }} • {{ chamado.categoria }}</div>
+                    </td>
+
+                    <td>
+                        {% if chamado.prioridade == 'Alta' %}
+                            <span class="badge rounded-pill badge-alta px-2 py-1">Alta</span>
+                        {% elif chamado.prioridade == 'Média' %}
+                            <span class="badge rounded-pill badge-media px-2 py-1">Média</span>
+                        {% else %}
+                            <span class="badge rounded-pill badge-baixa px-2 py-1">Baixa</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if chamado.operador %}
+                            <div class="d-flex align-items-center">
+                                <div class="bg-dark text-white rounded-circle d-flex justify-content-center align-items-center small me-2" style="width:24px;height:24px;">{{ chamado.operador[0] }}</div>
+                                <span class="small fw-bold">{{ chamado.operador }}</span>
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">--</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if chamado.data_limite %}
+                            <small class="
+                                {% if chamado.prazo_status == 'vencido' %}prazo-vencido
+                                {% elif chamado.prazo_status == 'urgente' %}prazo-urgente
+                                {% elif chamado.prazo_status == 'proximo' %}prazo-proximo
+                                {% else %}prazo-ok{% endif %}">
+                                {% if chamado.prazo_status == 'vencido' %}⚠ {% endif %}
+                                {{ chamado.data_limite | format_datetime }}
+                            </small>
+                        {% else %}
+                            <small class="text-muted">—</small>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if chamado.inicio_atendimento %}
+                            <span class="badge bg-success bg-opacity-75"><i class="bi bi-play-fill"></i> Em Andamento</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark border">{{ chamado.status }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Timer com auto-refresh via JS -->
+                    <td class="fw-bold font-monospace text-muted">
+                        <span class="timer-display"
+                              data-seconds="{{ chamado.tempo_atual_visual }}"
+                              data-running="{{ '1' if chamado.inicio_atendimento else '0' }}">
+                            {{ chamado.tempo_atual_visual | format_time }}
+                        </span>
+                    </td>
+
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-light border"><i class="bi bi-arrows-angle-expand"></i></button>
+                    </td>
+                </tr>
+
+                <!-- Modal de trabalho -->
+                <div class="modal fade" id="workModal{{ chamado.id }}" tabindex="-1" aria-hidden="true" onclick="event.stopPropagation()">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content border-0 shadow-lg" style="min-height: 80vh;">
+
+                            <div class="modal-header bg-white border-bottom py-3">
+                                <div class="d-flex align-items-center gap-3 w-100">
+                                    <div class="bg-light rounded p-2 text-center" style="min-width:60px;">
+                                        <div class="small text-muted text-uppercase">ID</div>
+                                        <div class="fw-bold">#{{ chamado.id }}</div>
+                                    </div>
+                                    <div>
+                                        <h4 class="modal-title fw-bold mb-0">{{ chamado.titulo }}</h4>
+                                        <div class="text-muted small">Aberto {{ chamado.data_criacao | time_ago }}</div>
+                                    </div>
+
+                                    <div class="ms-auto d-flex align-items-center gap-2">
+                                        <div class="text-end me-3">
+                                            <div class="fs-4 fw-bold font-monospace {% if chamado.inicio_atendimento %}text-success{% else %}text-secondary{% endif %}">
+                                                {{ chamado.tempo_atual_visual | format_time }}
+                                            </div>
+                                        </div>
+
+                                        {% if chamado.inicio_atendimento %}
+                                            <a href="{{ url_for('toggle_timer', id=chamado.id) }}" class="btn btn-warning fw-bold px-3 py-2 shadow-sm">
+                                                <i class="bi bi-pause-fill"></i> PAUSAR
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('toggle_timer', id=chamado.id) }}" class="btn btn-success fw-bold px-3 py-2 shadow-sm">
+                                                <i class="bi bi-play-fill"></i> PLAY
+                                            </a>
+                                        {% endif %}
+
+                                        {% if chamado.status != 'Concluído' %}
+                                        <button type="button" class="btn btn-outline-dark fw-bold px-3 py-2 ms-2" data-bs-toggle="modal" data-bs-target="#finishModal{{ chamado.id }}">
+                                            <i class="bi bi-check-lg"></i> CONCLUIR
+                                        </button>
+                                        {% else %}
+                                        <a href="{{ url_for('reabrir', id=chamado.id) }}" class="btn btn-outline-warning fw-bold px-3 py-2 ms-2"
+                                           onclick="return confirm('Reabrir este chamado?')">
+                                            <i class="bi bi-arrow-counterclockwise"></i> REABRIR
+                                        </a>
+                                        {% endif %}
+
+                                        <button type="button" class="btn-close ms-3" data-bs-dismiss="modal"></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-body bg-light p-0">
+                                <div class="row g-0 h-100">
+
+                                    <!-- Painel esquerdo: dados + edição -->
+                                    <div class="col-lg-4 bg-white border-end p-4 h-100 overflow-auto">
+                                        <form action="{{ url_for('editar_chamado', id=chamado.id) }}" method="POST">
+
+                                            <!-- NOVO: editar título -->
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">TÍTULO</label>
+                                                <input type="text" class="form-control" name="titulo" value="{{ chamado.titulo }}" required>
+                                            </div>
+
+                                            <!-- NOVO: editar descrição -->
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">DESCRIÇÃO</label>
+                                                <textarea class="form-control" name="descricao" rows="3">{{ chamado.descricao }}</textarea>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">EMPRESA</label>
+                                                <input type="text" class="form-control" name="empresa" value="{{ chamado.empresa or '' }}">
+                                            </div>
+
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold text-muted">STATUS</label>
+                                                    <select class="form-select" name="status">
+                                                        <option value="Aberto"       {% if chamado.status == 'Aberto'       %}selected{% endif %}>Aberto</option>
+                                                        <option value="Em Andamento" {% if chamado.status == 'Em Andamento' %}selected{% endif %}>Em Andamento</option>
+                                                        <option value="Pausado"      {% if chamado.status == 'Pausado'      %}selected{% endif %}>Pausado</option>
+                                                        <option value="Concluído"    {% if chamado.status == 'Concluído'    %}selected{% endif %}>Concluído</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold text-muted">PRIORIDADE</label>
+                                                    <select class="form-select" name="prioridade">
+                                                        <option value="Baixa" {% if chamado.prioridade == 'Baixa' %}selected{% endif %}>Baixa</option>
+                                                        <option value="Média" {% if chamado.prioridade == 'Média' %}selected{% endif %}>Média</option>
+                                                        <option value="Alta"  {% if chamado.prioridade == 'Alta'  %}selected{% endif %}>Alta</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">CATEGORIA</label>
+                                                <select class="form-select" name="categoria">
+                                                    <option value="Hardware" {% if chamado.categoria == 'Hardware' %}selected{% endif %}>Hardware</option>
+                                                    <option value="Software" {% if chamado.categoria == 'Software' %}selected{% endif %}>Software</option>
+                                                    <option value="Rede"     {% if chamado.categoria == 'Rede'     %}selected{% endif %}>Rede</option>
+                                                    <option value="Acesso"   {% if chamado.categoria == 'Acesso'   %}selected{% endif %}>Acesso</option>
+                                                    <option value="Geral"    {% if chamado.categoria == 'Geral'    %}selected{% endif %}>Geral</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">OPERADOR</label>
+                                                <select class="form-select" name="operador">
+                                                    <option value="">-- Selecione --</option>
+                                                    <option value="Admin"      {% if chamado.operador == 'Admin'      %}selected{% endif %}>Admin</option>
+                                                    <option value="Suporte N1" {% if chamado.operador == 'Suporte N1' %}selected{% endif %}>Suporte N1</option>
+                                                    <option value="Suporte N2" {% if chamado.operador == 'Suporte N2' %}selected{% endif %}>Suporte N2</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-muted">MESA</label>
+                                                <input type="text" class="form-control" name="mesa" value="{{ chamado.mesa or '' }}">
+                                            </div>
+
+                                            <!-- NOVO: SLA / Prazo -->
+                                            <div class="mb-4">
+                                                <label class="form-label small fw-bold text-muted">PRAZO (SLA)</label>
+                                                <input type="datetime-local" class="form-control" name="data_limite"
+                                                       value="{{ chamado.data_limite.strftime('%Y-%m-%dT%H:%M') if chamado.data_limite else '' }}">
+                                                {% if chamado.data_limite %}
+                                                    <small class="
+                                                        {% if chamado.prazo_status == 'vencido' %}prazo-vencido
+                                                        {% elif chamado.prazo_status == 'urgente' %}prazo-urgente
+                                                        {% else %}prazo-ok{% endif %} d-block mt-1">
+                                                        {% if chamado.prazo_status == 'vencido' %}⚠ Prazo vencido
+                                                        {% elif chamado.prazo_status == 'urgente' %}⏰ Vence em menos de 1h
+                                                        {% elif chamado.prazo_status == 'proximo' %}📅 Vence hoje
+                                                        {% else %}✅ Dentro do prazo{% endif %}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100 fw-bold">Salvar Alterações</button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Painel direito: chat -->
+                                    <div class="col-lg-8 p-4 d-flex flex-column h-100">
+                                        <div class="chat-container border p-3 flex-grow-1 mb-3">
+                                            {% if not chamado.comentarios_lista %}
+                                                <div class="text-center text-muted py-5">
+                                                    <i class="bi bi-chat-dots" style="font-size:2rem;"></i>
+                                                    <p class="mt-2 small">Nenhuma mensagem ainda.</p>
+                                                </div>
+                                            {% endif %}
+                                            {% for com in chamado.comentarios_lista %}
+                                                <div class="d-flex flex-column mb-3 {% if com.tipo == 'Privado' %}align-items-end{% else %}align-items-start{% endif %}">
+                                                    <div class="d-flex align-items-center mb-1 gap-2">
+                                                        <span class="fw-bold small">{{ com.autor.nome }}</span>
+                                                        <span class="text-muted" style="font-size: 0.75rem;">{{ com.data_criacao.strftime('%d/%m %H:%M') }}</span>
+                                                        {% if com.tipo == 'Privado' %}<span class="badge bg-warning text-dark" style="font-size:0.6rem;">Interno</span>{% endif %}
+                                                    </div>
+                                                    <div class="msg-bubble shadow-sm {% if com.tipo == 'Privado' %}msg-privado{% else %}msg-publico{% endif %}">
+                                                        {{ com.texto }}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+
+                                        <!-- Input de mensagem -->
+                                        <form action="{{ url_for('comentar', id=chamado.id) }}" method="POST" onsubmit="salvarModal('workModal{{ chamado.id }}')">
+                                            <div style="display:flex;align-items:center;background-color:#f1f5f9;border:1px solid #cbd5e1;border-radius:25px;padding:4px 16px;margin-bottom:8px;">
+                                                <textarea name="texto" rows="1" placeholder="Escreva uma mensagem..." required
+                                                          style="border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important;flex-grow:1;resize:none;height:40px;padding-top:8px;font-size:0.95rem;width:100%;margin:0;"></textarea>
+                                                <button type="submit" title="Enviar"
+                                                        style="background:transparent;border:none;color:#3b82f6;font-size:1.4rem;cursor:pointer;padding:0;margin-left:10px;display:flex;align-items:center;justify-content:center;">
+                                                    <i class="bi bi-send-fill"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex justify-content-end px-2">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" name="privado" id="privadoSwitch{{ chamado.id }}">
+                                                    <label class="form-check-label small text-muted d-flex align-items-center gap-1" for="privadoSwitch{{ chamado.id }}">
+                                                        <i class="bi bi-lock-fill text-warning"></i> Nota Interna (Privado)
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal de encerramento -->
+                <div class="modal fade" id="finishModal{{ chamado.id }}" tabindex="-1" aria-hidden="true" style="z-index:1060;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Encerrar Atendimento</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form action="{{ url_for('finalizar', id=chamado.id) }}" method="POST">
+                                <div class="modal-body p-4">
+                                    <div class="alert alert-light border mb-3">
+                                        <i class="bi bi-info-circle me-1"></i> Descreva a solução. Isso ficará registrado no histórico.
+                                    </div>
+                                    <label class="fw-bold text-muted small mb-1">SOLUÇÃO APLICADA</label>
+                                    <textarea name="resolucao" class="form-control" rows="4" placeholder="Ex: Reiniciado o servidor..." required></textarea>
+                                </div>
+                                <div class="modal-footer bg-light">
+                                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-success fw-bold px-4">Confirmar e Fechar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <tr><td colspan="8" class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;display:block;margin-bottom:8px;opacity:0.3;"></i>
+                    Nenhum chamado encontrado.
+                    {% if busca_atual %}<br><a href="{{ url_for('tickets') }}" class="small">Limpar filtros</a>{% endif %}
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal de novo chamado -->
+<div class="modal fade" id="novoChamadoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Abrir Novo Ticket</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <form action="{{ url_for('criar_chamado') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-8">
+                            <label class="small fw-bold text-muted">ASSUNTO</label>
+                            <input type="text" class="form-control" name="titulo" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="small fw-bold text-muted">EMPRESA</label>
+                            <input type="text" class="form-control" name="empresa">
+                        </div>
+                        <div class="col-12">
+                            <label class="small fw-bold text-muted">DESCRIÇÃO</label>
+                            <textarea class="form-control" name="descricao" rows="3" required></textarea>
+                        </div>
+                        <div class="col-4">
+                            <label class="small fw-bold text-muted">PRIORIDADE</label>
+                            <select class="form-select" name="prioridade">
+                                <option value="Baixa">Baixa</option>
+                                <option value="Média" selected>Média</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="small fw-bold text-muted">CATEGORIA</label>
+                            <select class="form-select" name="categoria">
+                                <option value="Hardware">Hardware</option>
+                                <option value="Software">Software</option>
+                                <option value="Rede">Rede</option>
+                                <option value="Acesso">Acesso</option>
+                                <option value="Geral">Geral</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="small fw-bold text-muted">OPERADOR</label>
+                            <select class="form-select" name="operador">
+                                <option value="">-- Nenhum --</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Suporte N1">Suporte N1</option>
+                                <option value="Suporte N2">Suporte N2</option>
+                            </select>
+                        </div>
+                        <!-- NOVO: Prazo / SLA -->
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">PRAZO (SLA) <span class="text-muted fw-normal">opcional</span></label>
+                            <input type="datetime-local" class="form-control" name="data_limite">
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">MESA</label>
+                            <input type="text" class="form-control" name="mesa" placeholder="Ex: TI, Financeiro...">
+                        </div>
+                    </div>
+                    <button class="btn btn-dark w-100 mt-4 py-2">Criar Ticket</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Reabre o modal após redirect ──────────────────────────────────────────────
+function salvarModal(modalId) {
+    sessionStorage.setItem('modalAberto', modalId);
+}
+document.addEventListener("DOMContentLoaded", function () {
+    let modalId = sessionStorage.getItem('modalAberto');
+    if (modalId) {
+        let el = document.getElementById(modalId);
+        if (el) new bootstrap.Modal(el).show();
+        sessionStorage.removeItem('modalAberto');
+    }
+});
+
+// ── Auto-refresh dos timers (atualiza a cada segundo sem recarregar a página) ─
+(function () {
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function secsToDisplay(s) {
+        let m = Math.floor(s / 60);
+        let h = Math.floor(m / 60);
+        m = m % 60;
+        return pad(h) + 'h ' + pad(m) + 'm';
+    }
+
+    document.querySelectorAll('.timer-display[data-running="1"]').forEach(function (el) {
+        let secs = parseInt(el.dataset.seconds, 10);
+        el.textContent = secsToDisplay(secs);
+        setInterval(function () {
+            secs++;
+            el.textContent = secsToDisplay(secs);
+        }, 1000);
+    });
+})();
+</script>
+{% endblock %}

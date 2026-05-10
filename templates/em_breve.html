@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 70vh;">
+    <div class="text-center" style="max-width: 420px;">
+        <div class="mb-4" style="font-size: 4rem; opacity: 0.15;">
+            <i class="bi {{ icone }}"></i>
+        </div>
+        <h2 class="fw-bold text-dark mb-2">{{ nome }}</h2>
+        <p class="text-muted mb-4">Esta seção ainda está em desenvolvimento e será disponibilizada em breve.</p>
+        <a href="{{ url_for('tickets') }}" class="btn btn-dark px-4">
+            <i class="bi bi-arrow-left me-2"></i>Voltar para Chamados
+        </a>
+    </div>
+</div>
+{% endblock %}
