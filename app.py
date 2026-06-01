@@ -435,5 +435,5 @@ if __name__ == '__main__':
             user = Usuario(nome='Admin', email='admin@help.com', senha='123')
             db.session.add(user)
             db.session.commit()
-    app.run(debug=True)
+    app.run(debug=True, port="5001")
 
